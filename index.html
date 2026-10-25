@@ -83,6 +83,97 @@
   </header>
 
   <section>
+    <h2><span class="n">0.</span> Sơ đồ kiến trúc tổng quát</h2>
+    <p>App tách làm hai nhánh AI: <b>sinh nội dung chạy cloud</b> (ký request) và
+      <b>sửa ảnh/beauty chạy on-device</b> (TFLite + MediaPipe).</p>
+    <svg viewBox="0 0 840 620" role="img" aria-label="Sơ đồ kiến trúc" style="width:100%;height:auto;font-family:inherit">
+      <style>
+        .box{fill:var(--card);stroke:var(--line);stroke-width:1.5;rx:10}
+        .t{fill:var(--ink);font-size:13px}
+        .tb{fill:var(--ink);font-size:14px;font-weight:700}
+        .tm{fill:var(--muted);font-size:11.5px}
+        .acc{fill:var(--accent);font-size:11.5px;font-weight:700}
+        .ln{stroke:var(--muted);stroke-width:1.5;fill:none}
+        .lna{stroke:var(--accent);stroke-width:2;fill:none}
+        .mdl{fill:var(--obs-bg)}
+      </style>
+      <defs>
+        <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+          <path d="M0,0 L9,4.5 L0,9 z" fill="var(--muted)"/>
+        </marker>
+        <marker id="arrA" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+          <path d="M0,0 L9,4.5 L0,9 z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+
+      <!-- App shell -->
+      <rect class="box" x="300" y="12" width="240" height="46" rx="10"/>
+      <text class="tb" x="420" y="33" text-anchor="middle">App — Kotlin · MVVM · Hilt</text>
+      <text class="tm" x="420" y="49" text-anchor="middle">ActMain · splash · onboarding · paywall</text>
+
+      <!-- two branches -->
+      <path class="ln" d="M420,58 L420,74 M200,74 L640,74 M200,74 L200,92 M640,74 L640,92" marker-end="url(#arr)"/>
+
+      <!-- LEFT: cloud generation -->
+      <rect class="box" x="24" y="92" width="352" height="210" rx="10"/>
+      <text class="tb" x="40" y="114">AI Generation — CLOUD</text>
+      <text class="acc" x="40" y="132">vidix/ai · MVVM · poll bất đồng bộ</text>
+      <rect class="box" x="40" y="144" width="150" height="34"/><text class="t" x="115" y="165" text-anchor="middle">TTI · text→ảnh</text>
+      <rect class="box" x="210" y="144" width="150" height="34"/><text class="t" x="285" y="165" text-anchor="middle">ITI · ảnh→ảnh</text>
+      <rect class="box" x="40" y="186" width="150" height="34"/><text class="t" x="115" y="207" text-anchor="middle">ITV · ảnh→video</text>
+      <rect class="box" x="210" y="186" width="150" height="34"/><text class="t" x="285" y="207" text-anchor="middle">AI Dance</text>
+      <text class="tm" x="40" y="242">Mỗi request ký bằng ApiSignatureUtil</text>
+      <text class="tm" x="40" y="258">→ libsigner.so (native)</text>
+      <text class="tm" x="40" y="282">Upload: presigned-link · NSFW: content-safety</text>
+
+      <!-- RIGHT: on-device editor -->
+      <rect class="box" x="464" y="92" width="352" height="210" rx="10"/>
+      <text class="tb" x="480" y="114">Editor / Beauty — ON-DEVICE</text>
+      <text class="acc" x="480" y="132">Apero BeautySDK · TFLite + MediaPipe</text>
+      <rect class="box mdl" x="480" y="144" width="320" height="30"/><text class="t" x="490" y="164">Retouch da → <tspan class="acc">resnet18_face_parsing</tspan></text>
+      <rect class="box mdl" x="480" y="180" width="320" height="30"/><text class="t" x="490" y="200">Xoá vật thể → <tspan class="acc">inpainting_net + generator_int8</tspan></text>
+      <rect class="box mdl" x="480" y="216" width="320" height="30"/><text class="t" x="490" y="236">Reshape/makeup → <tspan class="acc">MediaPipe + detection_net</tspan></text>
+      <rect class="box" x="480" y="252" width="320" height="30"/><text class="t" x="490" y="272">Adjust · crop · paint · sticker · text (perfectx)</text>
+
+      <!-- arrow from left branch down to backend -->
+      <path class="lna" d="M200,302 L200,330 L420,330 L420,352" marker-end="url(#arrA)"/>
+
+      <!-- backend -->
+      <rect class="box" x="150" y="352" width="540" height="150" rx="10"/>
+      <text class="tb" x="170" y="376">Apero backend — *.aperogroup.ai</text>
+      <text class="t" x="170" y="402">POST  api/v1/workflow/execute</text><text class="tm" x="470" y="402">bắt đầu workflow (TTI/ITI/ITV/Dance)</text>
+      <text class="t" x="170" y="424">GET   api/v1/workflow/execute/{runId}</text><text class="tm" x="470" y="424">poll tới khi success</text>
+      <text class="t" x="170" y="446">GET   api/v5/presigned-link</text><text class="tm" x="470" y="446">lấy URL upload ảnh</text>
+      <text class="t" x="170" y="468">POST  api/v5/content-safety</text><text class="tm" x="470" y="468">kiểm duyệt NSFW trước khi sinh</text>
+      <text class="t" x="170" y="490">GET   timestamp</text><text class="tm" x="470" y="490">đồng bộ giờ để ký request</text>
+
+      <!-- SDK side -->
+      <rect class="box" x="24" y="528" width="792" height="74" rx="10"/>
+      <text class="tb" x="40" y="550">SDK nền</text>
+      <text class="tm" x="40" y="572">Ads: AppLovin MAX + AdMob (Pangle/Mintegral/Vungle/AdColony/Meta) · apero · Billing</text>
+      <text class="tm" x="40" y="590">Đo lường: Adjust · AppsFlyer · Facebook · Firebase (App Check + Play Integrity) · ByteDance APM</text>
+    </svg>
+  </section>
+
+  <section>
+    <h2><span class="n">0b.</span> Tính năng → Model → API</h2>
+    <table>
+      <tr><th>Tính năng</th><th>Chức năng</th><th>Model / Engine</th><th>API</th></tr>
+      <tr><td><code>Act_TTI</code> — Text→Image</td><td>Gõ mô tả, sinh ảnh</td><td><span class="tag inf">cloud</span>server-side</td><td><code>POST workflow/execute</code> → poll <code>{runId}</code></td></tr>
+      <tr><td><code>Act_ITI</code> — Image→Image</td><td>Biến đổi ảnh có sẵn</td><td><span class="tag inf">cloud</span>server-side</td><td><code>presigned-link</code> → <code>content-safety</code> → <code>workflow/execute</code> → poll</td></tr>
+      <tr><td><code>Act_ITV</code> — Image→Video</td><td>Ảnh thành video</td><td><span class="tag inf">cloud</span>server-side</td><td>như ITI, body <code>ITVWorkflowRequest</code></td></tr>
+      <tr><td><code>ActAIDance</code> — AI Dance</td><td>Ảnh người nhảy theo mẫu</td><td><span class="tag inf">cloud</span>server-side</td><td><code>AIDanceWorkflowRequest</code> → <code>workflow/execute</code> → poll</td></tr>
+      <tr><td>Retouch da</td><td>Làm mịn/đều da mặt</td><td><span class="tag obs">on-device</span><code>resnet18_face_parsing</code> (FaceSkinParser)</td><td>—</td></tr>
+      <tr><td>Xoá vật thể (eraser)</td><td>Xoá & lấp vùng ảnh</td><td><span class="tag obs">on-device</span><code>inpainting_net</code> + <code>generator_int8</code> (RetouchPipeline)</td><td>—</td></tr>
+      <tr><td>Reshape mặt / makeup</td><td>Chỉnh mắt/môi/mũi/mày, trang điểm</td><td><span class="tag obs">on-device</span>MediaPipe FaceDetector + <code>detection_net</code></td><td>—</td></tr>
+      <tr><td>Adjust · crop · paint · sticker · text</td><td>Chỉnh sửa ảnh cơ bản (perfectx)</td><td>xử lý ảnh thường</td><td>—</td></tr>
+      <tr><td>Nội dung app (home, template)</td><td>Feed trang chủ, video mẫu</td><td>—</td><td><code>GET v1/screen/home</code>, <code>v1/screen/template_videos</code></td></tr>
+    </table>
+    <p><span class="tag obs">QUAN SÁT</span>Mọi call cloud mang header <code>x-api-signature</code> / <code>x-api-timestamp</code> / <code>x-api-token</code> / <code>x-api-bundleid</code> + <code>GET timestamp</code> để đồng bộ giờ — ký qua <code>ApiSignatureUtil</code> → <code>libsigner.so</code>.</p>
+    <p><span class="tag inf">SUY LUẬN</span>Sinh nội dung = cloud (nặng, cần GPU server), còn beauty/retouch = on-device (nhanh, offline, riêng tư hơn). Base URL generation bị mã hoá trong <code>APIEncrypted</code>/<code>SCEE</code>; host đã lộ qua content-safety là <code>*.aperogroup.ai</code>.</p>
+  </section>
+
+  <section>
     <h2><span class="n">1.</span> Danh tính</h2>
     <table>
       <tr><th>Mục</th><th>Giá trị</th></tr>

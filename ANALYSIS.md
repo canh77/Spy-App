@@ -5,6 +5,47 @@
 > Mỗi kết luận tách rõ **Quan sát** (thấy trong artifact) / **Suy luận** / **Chưa biết**.
 > Không có giá trị bí mật (API key, token) nào được chép vào tài liệu này.
 
+## 0. Sơ đồ kiến trúc
+
+```mermaid
+flowchart TD
+  App["App · Kotlin · MVVM · Hilt"] --> Gen["AI Generation — CLOUD (vidix/ai)"]
+  App --> Edit["Editor / Beauty — ON-DEVICE (Apero BeautySDK)"]
+  Gen --> TTI["TTI · text→ảnh"]
+  Gen --> ITI["ITI · ảnh→ảnh"]
+  Gen --> ITV["ITV · ảnh→video"]
+  Gen --> Dance["AI Dance"]
+  Gen -->|"ký request: ApiSignatureUtil → libsigner.so"| BE[("Apero backend · *.aperogroup.ai")]
+  BE --> E1["POST api/v1/workflow/execute"]
+  BE --> E2["GET api/v1/workflow/execute/{runId} · poll"]
+  BE --> E3["GET api/v5/presigned-link · upload"]
+  BE --> E4["POST api/v5/content-safety · NSFW"]
+  BE --> E5["GET timestamp"]
+  Edit --> M1["Retouch da → resnet18_face_parsing"]
+  Edit --> M2["Xoá vật thể → inpainting_net + generator_int8"]
+  Edit --> M3["Reshape/makeup → MediaPipe + detection_net"]
+  Edit --> M4["Adjust/crop/paint/sticker/text (perfectx)"]
+```
+
+### Tính năng → Model → API
+
+| Tính năng | Chức năng | Model / Engine | API |
+|---|---|---|---|
+| `Act_TTI` Text→Image | Gõ mô tả, sinh ảnh | cloud (server) | `POST workflow/execute` → poll `{runId}` |
+| `Act_ITI` Image→Image | Biến đổi ảnh có sẵn | cloud | `presigned-link` → `content-safety` → `workflow/execute` → poll |
+| `Act_ITV` Image→Video | Ảnh thành video | cloud | như ITI, body `ITVWorkflowRequest` |
+| `ActAIDance` AI Dance | Ảnh người nhảy theo mẫu | cloud | `AIDanceWorkflowRequest` → `workflow/execute` → poll |
+| Retouch da | Làm mịn/đều da | **on-device** `resnet18_face_parsing` (FaceSkinParser) | — |
+| Xoá vật thể (eraser) | Xoá & lấp vùng ảnh | **on-device** `inpainting_net` + `generator_int8` (RetouchPipeline) | — |
+| Reshape mặt / makeup | Chỉnh mắt/môi/mũi/mày | **on-device** MediaPipe + `detection_net` | — |
+| Adjust/crop/paint/sticker/text | Sửa ảnh cơ bản (perfectx) | xử lý ảnh thường | — |
+| Nội dung app | Home feed, video mẫu | — | `GET v1/screen/home`, `v1/screen/template_videos` |
+
+**Quan sát:** mọi call cloud mang header `x-api-signature` / `x-api-timestamp` / `x-api-token` / `x-api-bundleid`, kèm `GET timestamp` đồng bộ giờ — ký qua `ApiSignatureUtil` → `libsigner.so`.
+**Suy luận:** sinh nội dung = cloud (nặng, GPU server); beauty/retouch = on-device (nhanh, offline). Base URL generation mã hoá trong `APIEncrypted`/`SCEE`; host lộ qua content-safety là `*.aperogroup.ai`.
+
+---
+
 ## 1. Danh tính
 
 | Mục | Giá trị | Nguồn |
