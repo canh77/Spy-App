@@ -122,8 +122,8 @@
       <rect class="box" x="210" y="144" width="150" height="34"/><text class="t" x="285" y="165" text-anchor="middle">ITI · ảnh→ảnh</text>
       <rect class="box" x="40" y="186" width="150" height="34"/><text class="t" x="115" y="207" text-anchor="middle">ITV · ảnh→video</text>
       <rect class="box" x="210" y="186" width="150" height="34"/><text class="t" x="285" y="207" text-anchor="middle">AI Dance</text>
-      <text class="tm" x="40" y="242">Mỗi request ký bằng ApiSignatureUtil</text>
-      <text class="tm" x="40" y="258">→ libsigner.so (native)</text>
+      <text class="tm" x="40" y="242">Ký: ApiSignatureUtil — RSA/ECB/PKCS1</text>
+      <text class="tm" x="40" y="258">public_key + apiKey từ Remote Config</text>
       <text class="tm" x="40" y="282">Upload: presigned-link · NSFW: content-safety</text>
 
       <!-- RIGHT: on-device editor -->
@@ -169,8 +169,37 @@
       <tr><td>Adjust · crop · paint · sticker · text</td><td>Chỉnh sửa ảnh cơ bản (perfectx)</td><td>xử lý ảnh thường</td><td>—</td></tr>
       <tr><td>Nội dung app (home, template)</td><td>Feed trang chủ, video mẫu</td><td>—</td><td><code>GET v1/screen/home</code>, <code>v1/screen/template_videos</code></td></tr>
     </table>
-    <p><span class="tag obs">QUAN SÁT</span>Mọi call cloud mang header <code>x-api-signature</code> / <code>x-api-timestamp</code> / <code>x-api-token</code> / <code>x-api-bundleid</code> + <code>GET timestamp</code> để đồng bộ giờ — ký qua <code>ApiSignatureUtil</code> → <code>libsigner.so</code>.</p>
+    <p><span class="tag obs">QUAN SÁT</span>Mọi call cloud mang header <code>x-api-signature</code> / <code>x-api-timestamp</code> / <code>x-api-token</code> / <code>x-api-bundleid</code> + <code>GET timestamp</code> đồng bộ giờ — chữ ký dựng trong <code>ApiSignatureUtil</code> (RSA, public_key từ Remote Config).</p>
     <p><span class="tag inf">SUY LUẬN</span>Sinh nội dung = cloud (nặng, cần GPU server), còn beauty/retouch = on-device (nhanh, offline, riêng tư hơn). Base URL generation bị mã hoá trong <code>APIEncrypted</code>/<code>SCEE</code>; host đã lộ qua content-safety là <code>*.aperogroup.ai</code>.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">0c.</span> Payload, workflow &amp; chữ ký</h2>
+
+    <h3 style="font-size:15px;margin:4px 0 6px;color:var(--muted)">6 loại workflow — ID nạp từ Remote Config</h3>
+    <table>
+      <tr><th>Hằng số</th><th>Ý nghĩa</th></tr>
+      <tr><td><code>WORKFLOW_TTI_ID</code></td><td>Text → Image</td></tr>
+      <tr><td><code>WORKFLOW_TTV_ID</code></td><td>Text → Video</td></tr>
+      <tr><td><code>WORKFLOW_ITI_SINGLE_ID</code> / <code>…_MULTI_ID</code></td><td>Image → Image (1 ảnh / nhiều ảnh)</td></tr>
+      <tr><td><code>WORKFLOW_ITV_ID</code></td><td>Image → Video</td></tr>
+      <tr><td><code>WORKFLOW_VTV_ID</code></td><td>Video → Video</td></tr>
+    </table>
+    <p class="note">Giá trị rỗng trong code, điền lúc chạy → server có thể bật/tắt hoặc đổi pipeline từ xa mà không cần cập nhật app.</p>
+
+    <h3 style="font-size:15px;margin:14px 0 6px;color:var(--muted)">Khoá Remote Config</h3>
+    <p><code>API_BASEURL</code> · <code>APP_BASEURL</code> · <code>APP_NAME</code> · <code>BUNDLE_ID</code> · <code>apiKey</code> · <code>public_key</code> · <code>WORKFLOW_*_ID</code></p>
+
+    <h3 style="font-size:15px;margin:14px 0 6px;color:var(--muted)">Cấu trúc payload gửi lên</h3>
+    <table>
+      <tr><th>Request</th><th>Trường</th></tr>
+      <tr><td><code>WorkflowRequest</code> (TTI)</td><td><code>workflowId</code>, <code>input{ files[], positivePrompt }</code></td></tr>
+      <tr><td><code>ITIWorkflowRequest</code></td><td><code>workflowId</code>, <code>input{ files[], prompt }</code></td></tr>
+      <tr><td><code>AIDanceWorkflowRequest</code></td><td><code>inputImage</code>, <code>inputMotion</code>, <code>mode</code>, <code>positivePrompt</code>, <code>negativePrompt</code>, <code>resolution</code></td></tr>
+    </table>
+
+    <h3 style="font-size:15px;margin:14px 0 6px;color:var(--muted)">Chữ ký request</h3>
+    <p><span class="tag obs">QUAN SÁT</span><code>generateSignature(bundleId, appName)</code> → <code>fetchServerTimestamp()</code> (GET timestamp) → <code>buildSignature(timestamp)</code>: nạp <code>public_key</code> PEM → <code>Cipher("RSA/ECB/PKCS1Padding")</code> mã hoá → <code>Base64 NO_WRAP</code>. Trả <code>(signature, timestamp, apiKey)</code> gắn vào header.</p>
   </section>
 
   <section>
@@ -227,8 +256,9 @@
 
   <section>
     <h2><span class="n">5.</span> Chống giả mạo / ký request</h2>
-    <p><span class="tag obs">QUAN SÁT</span><b>REA</b>: <code>libsigner.so</code> — ELF arm64, 1.37MB, SHA-256 <code>55353b75…</code>, 74 dynsym / 2 export. Thêm <code>libpglarmor.so</code> (Pangle armor, chống tamper).</p>
-    <p><span class="tag inf">SUY LUẬN</span>Request tới dịch vụ của họ nhiều khả năng được <b>ký ở tầng native</b> để chống gọi API trực tiếp. Đây là lý do kỹ thuật vì sao không thể rút data backend bằng phân tích tĩnh.</p>
+    <p><span class="tag obs">QUAN SÁT</span><b>REA</b>: <code>libsigner.so</code> — ELF arm64, 1.37MB, SHA-256 <code>55353b75…</code>. Truy tiếp trong Java: lib này thuộc <b>Adjust SDK</b> (<code>com.adjust.sdk.sig.Signer</code> + <code>NativeLibHelper</code>) — ký attribution chống gian lận, <b>không phải</b> chữ ký API generation.</p>
+    <p><span class="tag obs">QUAN SÁT</span>Chữ ký API generation nằm ở <code>ApiSignatureUtil</code> — <b>Java thuần, không JNI</b>: <code>Cipher("RSA/ECB/PKCS1Padding")</code> + <code>public_key</code> (từ Remote Config), kết quả Base64 NO_WRAP.</p>
+    <p><span class="tag inf">SUY LUẬN</span>Hai cơ chế ký tách biệt; chống tamper native có thêm <code>libpglarmor.so</code> (Pangle). <b>Đính chính:</b> nhận định trước ("API ký bằng libsigner") là sai — bằng chứng Java cho thấy khác.</p>
   </section>
 
   <section>

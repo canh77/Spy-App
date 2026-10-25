@@ -15,7 +15,7 @@ flowchart TD
   Gen --> ITI["ITI · ảnh→ảnh"]
   Gen --> ITV["ITV · ảnh→video"]
   Gen --> Dance["AI Dance"]
-  Gen -->|"ký request: ApiSignatureUtil → libsigner.so"| BE[("Apero backend · *.aperogroup.ai")]
+  Gen -->|"ký: RSA public_key (Remote Config)"| BE[("Apero backend · *.aperogroup.ai")]
   BE --> E1["POST api/v1/workflow/execute"]
   BE --> E2["GET api/v1/workflow/execute/{runId} · poll"]
   BE --> E3["GET api/v5/presigned-link · upload"]
@@ -41,8 +41,20 @@ flowchart TD
 | Adjust/crop/paint/sticker/text | Sửa ảnh cơ bản (perfectx) | xử lý ảnh thường | — |
 | Nội dung app | Home feed, video mẫu | — | `GET v1/screen/home`, `v1/screen/template_videos` |
 
-**Quan sát:** mọi call cloud mang header `x-api-signature` / `x-api-timestamp` / `x-api-token` / `x-api-bundleid`, kèm `GET timestamp` đồng bộ giờ — ký qua `ApiSignatureUtil` → `libsigner.so`.
+**Quan sát:** mọi call cloud mang header `x-api-signature` / `x-api-timestamp` / `x-api-token` / `x-api-bundleid`, kèm `GET timestamp` đồng bộ giờ — chữ ký dựng trong `ApiSignatureUtil` (RSA, `public_key` từ Remote Config).
 **Suy luận:** sinh nội dung = cloud (nặng, GPU server); beauty/retouch = on-device (nhanh, offline). Base URL generation mã hoá trong `APIEncrypted`/`SCEE`; host lộ qua content-safety là `*.aperogroup.ai`.
+
+### Workflow, Remote Config & payload
+
+**6 loại workflow** — ID nạp từ Remote Config (rỗng trong code → server điều khiển từ xa):
+`WORKFLOW_TTI_ID` (text→image), `WORKFLOW_TTV_ID` (text→video), `WORKFLOW_ITI_SINGLE_ID` / `_MULTI_ID` (image→image 1/nhiều), `WORKFLOW_ITV_ID` (image→video), `WORKFLOW_VTV_ID` (video→video).
+
+**Khoá Remote Config:** `API_BASEURL`, `APP_BASEURL`, `APP_NAME`, `BUNDLE_ID`, `apiKey`, `public_key`, `WORKFLOW_*_ID`.
+
+**Payload:**
+- `WorkflowRequest { workflowId, input{ files[], positivePrompt } }` (TTI)
+- `ITIWorkflowRequest { workflowId, input{ files[], prompt } }`
+- `AIDanceWorkflowRequest { inputImage, inputMotion, mode, positivePrompt, negativePrompt, resolution }`
 
 ---
 
@@ -102,11 +114,12 @@ flowchart TD
 
 ## 5. Chống giả mạo / ký request
 
-**Quan sát (REA):**
-- `libsigner.so` — ELF arm64, 1.37MB, SHA-256 `55353b75…`, 74 dynsym / 2 export. (evidence_id `ev_bc76ab…`)
-- `libpglarmor.so` (68KB) — Pangle "armor" (chống tamper).
+**Quan sát (REA + Java):**
+- `libsigner.so` — ELF arm64, 1.37MB, SHA-256 `55353b75…` (evidence_id `ev_bc76ab…`). Truy trong Java: lib này thuộc **Adjust SDK** (`com.adjust.sdk.sig.Signer` + `NativeLibHelper`) — ký attribution chống gian lận, **không phải** chữ ký API generation.
+- Chữ ký API generation ở `ApiSignatureUtil` — **Java thuần, không JNI**: `Cipher("RSA/ECB/PKCS1Padding")` + `public_key` (Remote Config) → `Base64 NO_WRAP`. Flow: `fetchServerTimestamp()` → `buildSignature(timestamp)` → trả `(signature, timestamp, apiKey)`.
+- `libpglarmor.so` (68KB) — Pangle "armor" (chống tamper, riêng của SDK ads).
 
-**Suy luận:** request tới dịch vụ của họ nhiều khả năng **được ký ở tầng native** (libsigner) để chống gọi API trực tiếp từ ngoài. Đây chính là lý do kỹ thuật vì sao "rút data từ backend" là việc không làm được chỉ bằng phân tích tĩnh — và không nằm trong phạm vi hợp lệ.
+**Đính chính:** nhận định trước — "request ký ở tầng native qua libsigner" — **sai**. Chữ ký API là RSA thuần Java; `libsigner` là của Adjust. "Rút data backend" vẫn ngoài phạm vi hợp lệ, nhưng rào chắn thật là chữ ký RSA + timestamp server + content-safety, không phải native signer.
 
 ## 6. Quyền đáng chú ý
 
