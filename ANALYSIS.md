@@ -47,8 +47,17 @@
 | Model bundle | `assets/models` (**38MB**), `assets/shaders` |
 | Hậu xử lý detection | `libnms.so` (NMS), `libyuv-decoder.so` |
 
-**Suy luận:** một phần pipeline ảnh/khuôn mặt chạy **on-device** (MediaPipe + TFLite), không thuần server. 38MB model đi kèm APK là khoản nặng đáng chú ý về size.
-**Chưa biết:** phần sinh video/ảnh AI chính chạy local hay gọi API cloud — cần xem lớp network trong `sources` để xác định.
+**Model nhúng** — `assets/models` (4 file TFLite, 38MB):
+
+| Model | Size | Vai trò (suy từ tên) |
+|---|---|---|
+| `generator_int8.tflite` | 12.9MB | **Sinh ảnh** (generator, int8) |
+| `resnet18_face_parsing_int8.tflite` | 12.7MB | Phân vùng khuôn mặt (ResNet18 segmentation) |
+| `detection_net.tflite` | 6.0MB | Phát hiện đối tượng / khuôn mặt |
+| `inpainting_net.tflite` | 6.0MB | Inpainting — xoá / lấp vùng ảnh |
+
+**Suy luận:** có **generator + inpainting + face parsing** chạy **on-device** → một phần sinh/sửa ảnh AI không cần server; model int8 để chạy nhanh trên di động.
+**Chưa biết:** việc nặng (sinh video) có gọi thêm cloud không — cần xem lớp network trong `sources`.
 
 ## 5. Chống giả mạo / ký request
 
@@ -60,7 +69,18 @@
 
 ## 6. Quyền đáng chú ý
 
-**Quan sát:** `SYSTEM_ALERT_WINDOW` (overlay) · `ACCESS_ADSERVICES_*` (Privacy Sandbox) · `AD_ID` · `CAMERA` · `READ_MEDIA_IMAGES/VIDEO/AUDIO` + `READ_MEDIA_VISUAL_USER_SELECTED` · `POST_NOTIFICATIONS` · `RECEIVE_BOOT_COMPLETED` · `USE_FULL_SCREEN_INTENT` · `FOREGROUND_SERVICE`.
+**Quan sát** — toàn bộ 30 quyền trong AndroidManifest, nhóm theo mục đích:
+
+| Nhóm | Quyền |
+|---|---|
+| Media & camera | `CAMERA`, `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `READ_MEDIA_AUDIO`, `READ_MEDIA_VISUAL_USER_SELECTED` |
+| Mạng | `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `CHANGE_NETWORK_STATE` |
+| Quảng cáo / Privacy Sandbox | `AD_ID`, `ACCESS_ADSERVICES_AD_ID`, `ACCESS_ADSERVICES_ATTRIBUTION`, `ACCESS_ADSERVICES_TOPICS`, `ACCESS_ADSERVICES_CUSTOM_AUDIENCE` |
+| Thông báo & UI nổi | `POST_NOTIFICATIONS`, `USE_FULL_SCREEN_INTENT`, `SYSTEM_ALERT_WINDOW`, `DISABLE_KEYGUARD`, `FLAG_KEEP_SCREEN_ON`, `VIBRATE` |
+| Nền & vòng đời | `RECEIVE_BOOT_COMPLETED`, `FOREGROUND_SERVICE`, `WAKE_LOCK`, `SET_ALARM` |
+| Thanh toán / store | `vending.BILLING`, `vending.CHECK_LICENSE`, `finsky…BIND_GET_INSTALL_REFERRER_SERVICE` |
+| Push | `c2dm.permission.RECEIVE` |
+| Hãng (vendor) | `amazon.privacypass.ATTEST`, `huawei…GET_COMMON_DATA`, `samsung.mapsagent…READ_APP_INFO` |
 
 **Suy luận:** `RECEIVE_BOOT_COMPLETED` + `FULL_SCREEN_INTENT` + `SYSTEM_ALERT_WINDOW` là bộ quyền hay dùng cho **thông báo re-engagement / màn full-screen kéo người dùng lại** — đáng soi nếu bạn so sánh chiến lược retention.
 

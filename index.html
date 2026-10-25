@@ -122,8 +122,16 @@
       <tr><td>Model bundle</td><td><code>assets/models</code> (<b>38MB</b>), <code>assets/shaders</code></td></tr>
       <tr><td>Hậu xử lý detection</td><td><code>libnms.so</code>, <code>libyuv-decoder.so</code></td></tr>
     </table>
-    <p><span class="tag inf">SUY LUẬN</span>Một phần pipeline ảnh/khuôn mặt chạy <b>on-device</b>, không thuần server. 38MB model là khoản nặng về size.</p>
-    <p><span class="tag unk">CHƯA BIẾT</span>Phần sinh video/ảnh AI chính chạy local hay gọi cloud — cần xem lớp network.</p>
+    <h3 style="font-size:15px;margin:14px 0 6px;color:var(--muted)">Model nhúng — <code>assets/models</code> (4 file TFLite, 38MB)</h3>
+    <table>
+      <tr><th>Model</th><th>Kích thước</th><th>Vai trò (suy từ tên)</th></tr>
+      <tr><td><code>generator_int8.tflite</code></td><td>12.9 MB</td><td><b>Sinh ảnh</b> (generator, lượng tử hoá int8)</td></tr>
+      <tr><td><code>resnet18_face_parsing_int8.tflite</code></td><td>12.7 MB</td><td>Phân vùng khuôn mặt (ResNet18 segmentation)</td></tr>
+      <tr><td><code>detection_net.tflite</code></td><td>6.0 MB</td><td>Phát hiện đối tượng / khuôn mặt</td></tr>
+      <tr><td><code>inpainting_net.tflite</code></td><td>6.0 MB</td><td>Inpainting — xoá / lấp vùng ảnh</td></tr>
+    </table>
+    <p><span class="tag inf">SUY LUẬN</span>Có <b>generator</b> + <b>inpainting</b> + <b>face parsing</b> chạy <b>on-device</b> → một phần sinh/sửa ảnh AI không cần server. Model int8 để chạy nhanh trên di động.</p>
+    <p><span class="tag unk">CHƯA BIẾT</span>Việc nặng (sinh video, model lớn) có gọi thêm cloud không — cần xem lớp network.</p>
   </section>
 
   <section>
@@ -134,8 +142,19 @@
 
   <section>
     <h2><span class="n">6.</span> Quyền đáng chú ý</h2>
-    <p><span class="tag obs">QUAN SÁT</span><code>SYSTEM_ALERT_WINDOW</code> · <code>ACCESS_ADSERVICES_*</code> · <code>AD_ID</code> · <code>CAMERA</code> · <code>READ_MEDIA_*</code> · <code>POST_NOTIFICATIONS</code> · <code>RECEIVE_BOOT_COMPLETED</code> · <code>USE_FULL_SCREEN_INTENT</code> · <code>FOREGROUND_SERVICE</code>.</p>
-    <p><span class="tag inf">SUY LUẬN</span><code>RECEIVE_BOOT_COMPLETED</code> + <code>FULL_SCREEN_INTENT</code> + <code>SYSTEM_ALERT_WINDOW</code> = bộ quyền hay dùng cho re-engagement / màn full-screen kéo người dùng lại.</p>
+    <p class="note">Toàn bộ quyền khai báo trong AndroidManifest (30 quyền), nhóm theo mục đích.</p>
+    <table>
+      <tr><th>Nhóm</th><th>Quyền</th></tr>
+      <tr><td>Media &amp; camera</td><td><code>CAMERA</code>, <code>READ_MEDIA_IMAGES</code>, <code>READ_MEDIA_VIDEO</code>, <code>READ_MEDIA_AUDIO</code>, <code>READ_MEDIA_VISUAL_USER_SELECTED</code></td></tr>
+      <tr><td>Mạng</td><td><code>INTERNET</code>, <code>ACCESS_NETWORK_STATE</code>, <code>ACCESS_WIFI_STATE</code>, <code>CHANGE_NETWORK_STATE</code></td></tr>
+      <tr><td>Quảng cáo / Privacy Sandbox</td><td><code>AD_ID</code>, <code>ACCESS_ADSERVICES_AD_ID</code>, <code>ACCESS_ADSERVICES_ATTRIBUTION</code>, <code>ACCESS_ADSERVICES_TOPICS</code>, <code>ACCESS_ADSERVICES_CUSTOM_AUDIENCE</code></td></tr>
+      <tr><td>Thông báo &amp; UI nổi</td><td><code>POST_NOTIFICATIONS</code>, <code>USE_FULL_SCREEN_INTENT</code>, <code>SYSTEM_ALERT_WINDOW</code>, <code>DISABLE_KEYGUARD</code>, <code>FLAG_KEEP_SCREEN_ON</code>, <code>VIBRATE</code></td></tr>
+      <tr><td>Nền &amp; vòng đời</td><td><code>RECEIVE_BOOT_COMPLETED</code>, <code>FOREGROUND_SERVICE</code>, <code>WAKE_LOCK</code>, <code>SET_ALARM</code></td></tr>
+      <tr><td>Thanh toán / store</td><td><code>vending.BILLING</code>, <code>vending.CHECK_LICENSE</code>, <code>finsky…BIND_GET_INSTALL_REFERRER_SERVICE</code></td></tr>
+      <tr><td>Push</td><td><code>c2dm.permission.RECEIVE</code></td></tr>
+      <tr><td>Hãng (vendor)</td><td><code>amazon.privacypass.ATTEST</code>, <code>huawei…GET_COMMON_DATA</code>, <code>samsung.mapsagent…READ_APP_INFO</code></td></tr>
+    </table>
+    <p><span class="tag inf">SUY LUẬN</span><code>RECEIVE_BOOT_COMPLETED</code> + <code>FULL_SCREEN_INTENT</code> + <code>SYSTEM_ALERT_WINDOW</code> = bộ quyền hay dùng cho re-engagement / màn full-screen kéo người dùng lại. Bộ <code>ACCESS_ADSERVICES_*</code> đầy đủ cho thấy đã theo Privacy Sandbox mới.</p>
   </section>
 
   <section>
