@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teardown · com.vidix.aivideogenerator</title>
+<meta name="description" content="Phân tích tĩnh cạnh tranh: com.vidix.aivideogenerator.aiphotogenerator v1.3.3">
+<style>
+  :root{
+    --bg:#f7f8fa; --card:#fff; --ink:#1a1d21; --muted:#5b636d; --line:#e3e6ea;
+    --accent:#2f6feb; --obs:#1a7f4b; --inf:#9a6b00; --unk:#b02a37;
+    --obs-bg:#e7f6ee; --inf-bg:#fbf1d8; --unk-bg:#fbe7e9; --code:#eef1f5;
+  }
+  :root:not([data-theme="light"]){ }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0d1117; --card:#161b22; --ink:#e6edf3; --muted:#9aa4af; --line:#262c34;
+      --accent:#5a8bff; --obs:#56d08a; --inf:#e3b341; --unk:#ff7b84;
+      --obs-bg:#10261a; --inf-bg:#2a2410; --unk-bg:#2a1518; --code:#1c222b;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d1117; --card:#161b22; --ink:#e6edf3; --muted:#9aa4af; --line:#262c34;
+    --accent:#5a8bff; --obs:#56d08a; --inf:#e3b341; --unk:#ff7b84;
+    --obs-bg:#10261a; --inf-bg:#2a2410; --unk-bg:#2a1518; --code:#1c222b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%}
+  .wrap{max-width:860px;margin:0 auto;padding:32px 16px 80px}
+  header{margin-bottom:28px}
+  .eyebrow{color:var(--accent);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+  h1{font-size:28px;line-height:1.25;margin:.25em 0 .1em;word-break:break-word}
+  .sub{color:var(--muted);margin:0}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .pill{background:var(--card);border:1px solid var(--line);border-radius:999px;
+    padding:4px 12px;font-size:13px;color:var(--muted)}
+  .pill b{color:var(--ink);font-weight:600}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:20px 22px;margin:16px 0}
+  h2{font-size:19px;margin:.1em 0 .6em;display:flex;align-items:center;gap:8px}
+  h2 .n{color:var(--accent);font-variant-numeric:tabular-nums}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14.5px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.03em}
+  tr:last-child td{border-bottom:none}
+  code{background:var(--code);padding:1.5px 6px;border-radius:6px;font-size:13.5px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-word}
+  .tag{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:6px;
+    margin-right:6px;white-space:nowrap}
+  .tag.obs{color:var(--obs);background:var(--obs-bg)}
+  .tag.inf{color:var(--inf);background:var(--inf-bg)}
+  .tag.unk{color:var(--unk);background:var(--unk-bg)}
+  p{margin:.5em 0}
+  ul{margin:.4em 0;padding-left:1.2em}
+  li{margin:.3em 0}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted);margin-top:10px}
+  .note{font-size:13.5px;color:var(--muted);border-left:3px solid var(--line);padding:4px 0 4px 14px;margin:8px 0}
+  footer{color:var(--muted);font-size:13px;text-align:center;margin-top:30px}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Competitive teardown · phân tích tĩnh</div>
+    <h1>com.vidix.aivideogenerator.aiphotogenerator</h1>
+    <p class="sub">App tạo video / ảnh AI — nghiên cứu cạnh tranh nội bộ</p>
+    <div class="meta">
+      <span class="pill">Version <b>1.3.3</b> (114)</span>
+      <span class="pill">compileSdk <b>36</b></span>
+      <span class="pill">ABI <b>arm64-v8a</b></span>
+      <span class="pill">Phân phối <b>Split APK (AAB)</b></span>
+    </div>
+    <div class="legend">
+      <span><span class="tag obs">QUAN SÁT</span>thấy trong artifact</span>
+      <span><span class="tag inf">SUY LUẬN</span>diễn giải</span>
+      <span><span class="tag unk">CHƯA BIẾT</span>cần đào thêm</span>
+    </div>
+    <p class="note">Trang này chỉ chứa phân tích gốc. Không chứa mã nguồn, tài nguyên
+      hay model đã dịch ngược của ứng dụng gốc.</p>
+  </header>
+
+  <section>
+    <h2><span class="n">1.</span> Danh tính</h2>
+    <table>
+      <tr><th>Mục</th><th>Giá trị</th></tr>
+      <tr><td>Package</td><td><code>com.vidix.aivideogenerator.aiphotogenerator</code></td></tr>
+      <tr><td>Version</td><td>1.3.3 / 114</td></tr>
+      <tr><td>compileSdk</td><td>36 (codename 16)</td></tr>
+      <tr><td>Phân phối</td><td>Split APK set (AAB): base + <code>config.&lt;lang&gt;</code> + <code>config.arm64_v8a</code> + <code>config.xxhdpi</code></td></tr>
+      <tr><td>AdMob App ID</td><td><code>ca-app-pub-4584260126367940~…</code></td></tr>
+    </table>
+    <p><span class="tag obs">QUAN SÁT</span>Chỉ có ABI <code>arm64-v8a</code> trong set này → bản cho máy 64-bit.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">2.</span> Ngăn xếp kiếm tiền</h2>
+    <table>
+      <tr><th>Nhóm</th><th>SDK</th></tr>
+      <tr><td>Mediation</td><td><b>AppLovin MAX</b> + <b>AdMob</b></td></tr>
+      <tr><td>Adapter</td><td>AdColony (<code>jirbo</code>), Vungle, Mintegral (<code>mbridge</code>), Pangle/ByteDance (<code>bykv</code>, <code>pgl</code>, <code>tiktok</code>), Meta Audience Network</td></tr>
+      <tr><td>Wrapper</td><td><b><code>apero</code></b> — SDK quảng cáo của studio VN</td></tr>
+      <tr><td>Billing</td><td>Google Play Billing</td></tr>
+    </table>
+    <p><span class="tag inf">SUY LUẬN</span>Mediation đầy đủ, full-waterfall nhiều network. <code>apero</code> cho thấy nhiều khả năng cùng hệ sinh thái studio VN.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">3.</span> Attribution &amp; analytics</h2>
+    <p><span class="tag obs">QUAN SÁT</span>Adjust · AppsFlyer · Facebook SDK · Firebase (Analytics, Crashlytics, Performance, Remote Config, Messaging, <b>App Check + Play Integrity</b>) · ByteDance <b>APM</b>.</p>
+    <p><span class="tag inf">SUY LUẬN</span>Đo lường rất dày — attribution kép. App Check + Play Integrity → quan tâm chống lạm dụng API backend.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">4.</span> AI / xử lý ảnh trên thiết bị</h2>
+    <table>
+      <tr><th>Thành phần</th><th>Bằng chứng</th></tr>
+      <tr><td>TensorFlow Lite + GPU delegate</td><td><code>libtensorflowlite_jni.so</code> (4.5MB), <code>…_gpu_jni.so</code> (2.6MB)</td></tr>
+      <tr><td>MediaPipe Tasks Vision</td><td><code>libmediapipe_tasks_vision_jni.so</code> (<b>10.3MB</b>)</td></tr>
+      <tr><td>Model bundle</td><td><code>assets/models</code> (<b>38MB</b>), <code>assets/shaders</code></td></tr>
+      <tr><td>Hậu xử lý detection</td><td><code>libnms.so</code>, <code>libyuv-decoder.so</code></td></tr>
+    </table>
+    <p><span class="tag inf">SUY LUẬN</span>Một phần pipeline ảnh/khuôn mặt chạy <b>on-device</b>, không thuần server. 38MB model là khoản nặng về size.</p>
+    <p><span class="tag unk">CHƯA BIẾT</span>Phần sinh video/ảnh AI chính chạy local hay gọi cloud — cần xem lớp network.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">5.</span> Chống giả mạo / ký request</h2>
+    <p><span class="tag obs">QUAN SÁT</span><b>REA</b>: <code>libsigner.so</code> — ELF arm64, 1.37MB, SHA-256 <code>55353b75…</code>, 74 dynsym / 2 export. Thêm <code>libpglarmor.so</code> (Pangle armor, chống tamper).</p>
+    <p><span class="tag inf">SUY LUẬN</span>Request tới dịch vụ của họ nhiều khả năng được <b>ký ở tầng native</b> để chống gọi API trực tiếp. Đây là lý do kỹ thuật vì sao không thể rút data backend bằng phân tích tĩnh.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">6.</span> Quyền đáng chú ý</h2>
+    <p><span class="tag obs">QUAN SÁT</span><code>SYSTEM_ALERT_WINDOW</code> · <code>ACCESS_ADSERVICES_*</code> · <code>AD_ID</code> · <code>CAMERA</code> · <code>READ_MEDIA_*</code> · <code>POST_NOTIFICATIONS</code> · <code>RECEIVE_BOOT_COMPLETED</code> · <code>USE_FULL_SCREEN_INTENT</code> · <code>FOREGROUND_SERVICE</code>.</p>
+    <p><span class="tag inf">SUY LUẬN</span><code>RECEIVE_BOOT_COMPLETED</code> + <code>FULL_SCREEN_INTENT</code> + <code>SYSTEM_ALERT_WINDOW</code> = bộ quyền hay dùng cho re-engagement / màn full-screen kéo người dùng lại.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">7.</span> Nền tảng kỹ thuật</h2>
+    <p><span class="tag obs">QUAN SÁT</span>Dagger (DI) · Glide · Lottie · OkHttp · Room · WorkManager · Compose/emoji2 · <code>canhub</code> (cropper) · <code>makeramen</code> (rounded image) · <code>lexiai</code>, <code>vidix</code> (package riêng — lớp AI/domain của họ).</p>
+  </section>
+
+  <section>
+    <h2><span class="n">8.</span> REA dùng được gì</h2>
+    <table>
+      <tr><th>Việc</th><th>Trạng thái</th></tr>
+      <tr><td><code>inspect_android_package/class/method</code></td><td>❌ cần file <code>.apk</code> standalone — thư mục giải nén không nhận</td></tr>
+      <tr><td><code>inspect_native_exports</code> / <code>open_binary</code> trên <code>.so</code></td><td>✅ chạy tốt (đã dùng cho libsigner.so)</td></tr>
+      <tr><td>Đọc manifest + <code>sources/</code> Java</td><td>đọc trực tiếp (đã decompile sẵn)</td></tr>
+    </table>
+    <p class="note">Muốn dùng trọn bộ tool Android của REA → cần APK gốc (một file). <code>pull_adb_package</code> kéo từ thiết bị đã cài cho file hợp lệ.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">9.</span> Khoảng trống cần đào tiếp</h2>
+    <ul>
+      <li>Lớp network trong <code>sources</code> — host/endpoint, để biết AI chạy local hay cloud (§4).</li>
+      <li>Cách <code>libsigner</code> ký request (cần pseudocode native).</li>
+      <li>Remote Config keys — chiến lược bật/tắt tính năng &amp; quảng cáo.</li>
+      <li>So sánh version nếu có APK khác (REA <code>compare</code>).</li>
+    </ul>
+  </section>
+
+  <footer>
+    Phân tích tĩnh phục vụ nghiên cứu cạnh tranh · không chứa mã/asset dịch ngược của ứng dụng gốc.
+  </footer>
+</div>
+</body>
+</html>
